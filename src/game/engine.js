@@ -42,7 +42,7 @@ export function difficulty(score) {
   };
 }
 
-export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
+export function createGame(canvas, { onScore, onDeath, onStart, onFlap } = {}) {
   const ctx = canvas.getContext("2d");
   let W = 400;
   let scale = 1;
@@ -108,6 +108,7 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
     }
     s.bird.vy = FLAP_VELOCITY;
     s.bird.flapT = 0.25;
+    onFlap?.();
   }
 
   function die() {

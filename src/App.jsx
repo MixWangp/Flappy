@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Game from "./components/Game";
 import Leaderboard from "./components/Leaderboard";
 import NameScreen from "./components/NameScreen";
+import SoundControl from "./components/SoundControl";
+import { audio } from "./lib/sound";
 import { isFirebaseConfigured } from "./lib/firebase";
 import { randomDeathCaption } from "./game/engine";
-import { initSession, saveName, submitScore, subscribeLeaderboard } from "./lib/scores";
+import { initSession, resetMyScore, saveName, submitScore, subscribeLeaderboard } from "./lib/scores";
 
-const BEST_KEY = "flappy.best";
+const BEST_KEY = "flappy.v2.best";
 const readBest = () => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } };
 
 // screens: loading | error | name | rename | menu | playing | gameover
@@ -39,6 +41,38 @@ export default function App() {
       });
   }, []);
   useEffect(boot, [boot]);
+
+  // Browsers only allow sound after the first touch/click/key press.
+  useEffect(() => {
+    const unlock = () => audio.unlock();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  // "Reset my score" asks once more before deleting: the first tap arms it for 4 seconds.
+  const [resetState, setResetState] = useState("idle"); // idle | confirm | busy | done | error
+  useEffect(() => {
+    if (resetState !== "confirm" && resetState !== "done" && resetState !== "error") return;
+    const t = setTimeout(() => setResetState("idle"), 4000);
+    return () => clearTimeout(t);
+  }, [resetState]);
+  const handleReset = async () => {
+    if (resetState !== "confirm") return setResetState("confirm");
+    setResetState("busy");
+    try {
+      await resetMyScore(player);
+      try { localStorage.removeItem(BEST_KEY); } catch { /* ignore */ }
+      setBest(0);
+      setResetState("done");
+    } catch (err) {
+      console.error(err);
+      setResetState("error");
+    }
+  };
 
   // 2) One real-time leaderboard subscription for the whole app.
   useEffect(
@@ -110,6 +144,7 @@ export default function App() {
     <div className="flex h-[100dvh] w-full items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 sm:p-4">
       <main className="relative h-full w-full max-w-[520px] overflow-hidden bg-sky-300 sm:max-h-[900px] sm:rounded-[28px] sm:shadow-2xl sm:ring-4 sm:ring-white/10">
         <Game key={runId} interactive={inGame} onDeath={handleDeath} />
+        {screen !== "loading" && <SoundControl />}
 
         {!inGame && <div className="absolute inset-0 bg-slate-950/30" />}
 
@@ -158,9 +193,24 @@ export default function App() {
               </div>
             </div>
             <PrimaryButton onClick={startGame} className="w-full max-w-sm">▶ PLAY</PrimaryButton>
-            <button onClick={() => setScreen("rename")} className="-mt-1 text-xs font-semibold text-white/80 underline-offset-2 hover:underline">
-              Change name
-            </button>
+            <div className="-mt-1 flex items-center gap-4 rounded-full bg-slate-900/60 px-4 py-1.5 text-xs font-semibold">
+              <button onClick={() => setScreen("rename")} className="text-white/80 underline-offset-2 hover:underline">
+                Change name
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={resetState === "busy"}
+                className={resetState === "confirm" ? "rounded-full bg-rose-500 px-3 py-1 text-white" : "text-white/80 underline-offset-2 hover:underline"}
+              >
+                {{
+                  idle: "รีเซ็ตคะแนนของฉัน",
+                  confirm: "แน่ใจนะ? กดอีกครั้งเพื่อลบ",
+                  busy: "กำลังลบ…",
+                  done: "รีเซ็ตแล้ว ✓",
+                  error: "ลบไม่สำเร็จ ลองใหม่",
+                }[resetState]}
+              </button>
+            </div>
             <BoardPanel board={board} uid={player?.uid} />
           </Overlay>
         )}

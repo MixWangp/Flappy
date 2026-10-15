@@ -1,14 +1,15 @@
 import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import {
-  collection, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc,
+  collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc,
 } from "firebase/firestore";
 import { auth, db, isFirebaseConfigured } from "./firebase";
 
 export const LEADERBOARD_SIZE = 20;
 const LEADERBOARD = "leaderboard"; // /leaderboard/{uid} = { name, score, updatedAt }
 const PLAYERS = "players"; //         /players/{uid}     = { name, updatedAt }
-const NAME_KEY = "flappy.displayName";
-const LOCAL_SCORES_KEY = "flappy.localScores";
+// "v2" keys: bumping them makes every device forget its old name and best (season reset).
+const NAME_KEY = "flappy.v2.displayName";
+const LOCAL_SCORES_KEY = "flappy.v2.localScores";
 
 export function cleanName(raw) {
   return raw.replace(/[^\p{L}\p{N} _.\-!]/gu, "").replace(/\s+/g, " ").trim().slice(0, 16);
@@ -84,6 +85,18 @@ export async function submitScore(player, score) {
     }
     return { best: Math.max(prev, score), isNewBest: score > prev };
   });
+}
+
+/** Removes this player's own leaderboard entry (the rules let nobody delete anyone else's). */
+export async function resetMyScore(player) {
+  if (!isFirebaseConfigured) {
+    const all = readLocalScores();
+    delete all[player.name];
+    storage.set(LOCAL_SCORES_KEY, JSON.stringify(all));
+    window.dispatchEvent(new Event("local-scores"));
+    return;
+  }
+  await deleteDoc(doc(db, LEADERBOARD, player.uid));
 }
 
 /** Real-time Top 20. Calls onData(rows) on every change; returns an unsubscribe function. */

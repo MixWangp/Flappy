@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_LEVEL, createGame, difficulty } from "../game/engine";
+import { audio } from "../lib/sound";
 
 /**
  * Mounts the canvas engine. When `interactive` is false it just idles as an animated
@@ -15,9 +16,10 @@ export default function Game({ interactive, onDeath }) {
 
   useEffect(() => {
     const game = createGame(canvasRef.current, {
-      onScore: setScore,
+      onScore: (s) => { setScore(s); audio.score(); },
+      onFlap: () => audio.jump(),
       onStart: () => setPhase("playing"),
-      onDeath: (s) => { setPhase("dead"); onDeathRef.current?.(s); },
+      onDeath: (s) => { setPhase("dead"); audio.death(); onDeathRef.current?.(s); },
     });
     gameRef.current = game;
     return () => game.destroy();

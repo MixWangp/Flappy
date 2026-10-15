@@ -18,7 +18,7 @@ service cloud.firestore {
       allow create: if isOwner(uid) && validEntry();
       allow update: if isOwner(uid) && validEntry()
         && request.resource.data.score >= resource.data.score; // score can never go down
-      allow delete: if false;
+      allow delete: if isOwner(uid);             // players may reset only their own score
     }
 
     function isOwner(uid) {
