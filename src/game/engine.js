@@ -16,12 +16,13 @@ const STEP = 1 / 120; // fixed physics timestep (same feel at 60Hz and 144Hz)
 
 /** Difficulty curve: everything is a function of the current score. */
 export function difficulty(score) {
-  const t = Math.min(score / 50, 1); // fully ramped at 50 points
+  const t = Math.min(score / 40, 1); // fully ramped at 40 points
   return {
-    speed: 170 + 150 * t,            // px/s the world scrolls
-    gap: 190 - 55 * t,               // vertical opening between pipes
-    spacing: 270 - 40 * t,           // horizontal distance between pipes
-    wobble: score >= 15 ? Math.min((score - 15) * 2.2, 45) : 0, // pipes start moving up/down
+    speed: 190 + 170 * t,            // px/s the world scrolls
+    gap: 175 - 50 * t,               // vertical opening between pipes
+    spacing: 250 - 45 * t,           // horizontal distance between pipes
+    wobble: score >= 8 ? Math.min((score - 8) * 2.5, 60) : 0, // pipes start moving up/down
+    wobbleSpeed: 2 + 1.5 * t,        // ...and move faster the higher you get
   };
 }
 
@@ -69,13 +70,14 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
       baseY: minY + Math.random() * (maxY - minY),
       gap: d.gap,
       wobble: d.wobble,
+      wobbleSpeed: d.wobbleSpeed,
       phase: Math.random() * Math.PI * 2,
       passed: false,
     });
   }
 
   function pipeY(p) {
-    return p.baseY + Math.sin(s.time * 2 + p.phase) * p.wobble;
+    return p.baseY + Math.sin(s.time * p.wobbleSpeed + p.phase) * p.wobble;
   }
 
   function flap() {
