@@ -3,6 +3,7 @@ import Game from "./components/Game";
 import Leaderboard from "./components/Leaderboard";
 import NameScreen from "./components/NameScreen";
 import { isFirebaseConfigured } from "./lib/firebase";
+import { randomDeathCaption } from "./game/engine";
 import { initSession, saveName, submitScore, subscribeLeaderboard } from "./lib/scores";
 
 const BEST_KEY = "flappy.best";
@@ -77,7 +78,7 @@ export default function App() {
         try { localStorage.setItem(BEST_KEY, String(score)); } catch { /* ignore */ }
         setBest(score);
       }
-      setResult({ score, best: Math.max(localBest, score), isNewBest, saving: true });
+      setResult({ score, best: Math.max(localBest, score), isNewBest, saving: true, caption: randomDeathCaption() });
       setTimeout(() => setScreen("gameover"), 650);
 
       submitScore(player, score)
@@ -166,7 +167,12 @@ export default function App() {
 
         {screen === "gameover" && result && (
           <Overlay>
-            <h2 className="text-5xl font-black text-white [text-shadow:0_4px_0_#7c2d12]">Game Over</h2>
+            <div className="flex shrink-0 flex-col items-center gap-0.5">
+              <p className="rounded-full bg-black/35 px-3 py-0.5 text-xs font-extrabold tracking-[2px] text-white uppercase">Game over</p>
+              <h2 className="meme-caption text-center text-[clamp(44px,13vw,62px)] leading-[1.05] text-balance text-white uppercase">
+                {result.caption}
+              </h2>
+            </div>
             <div className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-2xl bg-slate-900/85 p-4 text-center text-white">
               <div>
                 <p className="text-[11px] tracking-wider text-slate-400 uppercase">Score</p>

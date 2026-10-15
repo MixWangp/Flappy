@@ -16,6 +16,23 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* classic meme caption: impact-style caps, white with a heavy black outline */
+.meme-caption {
+  font-family: "Anton", "Mitr", Impact, "Arial Narrow", sans-serif;
+  letter-spacing: 1px;
+  -webkit-text-stroke: 3px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 rgba(0, 0, 0, 0.35);
+  animation: slam 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes slam {
+  0% { transform: scale(2.2) rotate(-6deg); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meme-caption { animation: none; }
+}
+
 @keyframes pop {
   0% { transform: scale(1.8); }
   100% { transform: scale(1); }

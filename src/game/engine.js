@@ -16,6 +16,23 @@ const STEP = 1 / 120; // fixed physics timestep (same feel at 60Hz and 144Hz)
 
 export const MAX_LEVEL = 10;
 
+// Doge-style captions and Thai slang that drift across the sky.
+const MEME_PHRASES = [
+  "such fly", "very pipe", "much wow", "so gravity", "wow", "very tap", "such skill", "amaze",
+  "much flap", "so pro", "ปังมาก", "ตึงจัด", "555555", "บินดีๆ สิ", "ไม่ไหวแล้วแม่", "อย่างโหด",
+  "นกไม่ใช่ไก่", "ใจเย็นๆ", "ตัวตึง", "สุดจัด",
+];
+const MEME_COLORS = ["#ff2bd6", "#00c853", "#ff3d00", "#2962ff", "#ffd600", "#aa00ff", "#00e5ff", "#ff6d00"];
+const MEME_FONT = '"Comic Neue", "Comic Sans MS", "Mitr", cursive';
+
+// Shown big on the Game Over screen.
+const DEATH_CAPTIONS = [
+  "BRUH", "SKILL ISSUE", "EMOTIONAL DAMAGE", "F", "OOF", "แป้กกก", "พังจ้า", "ไปต่อไม่เป็น",
+  "นกจ๋า…", "เกือบแล้ว!", "NOT LIKE THIS", "ใครกดเนี่ย",
+];
+export const randomDeathCaption = () => DEATH_CAPTIONS[Math.floor(Math.random() * DEATH_CAPTIONS.length)];
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
 /**
  * Difficulty goes up in steps: one level every 10 points, maxing out at 100+.
  * Pipes start moving up and down at level 1 (10 points).
@@ -48,6 +65,7 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
     groundX: 0,
     flash: 0,
     deadT: 0,
+    glasses: 0, // "deal with it" sunglasses slide onto the doge at max level
   };
 
   const clouds = Array.from({ length: 6 }, (_, i) => ({
@@ -55,6 +73,18 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
     y: 40 + Math.random() * 180,
     r: 22 + Math.random() * 18,
   }));
+
+  const memes = Array.from({ length: 5 }, (_, i) => newMeme(60 + i * 110));
+  function newMeme(x) {
+    return {
+      x,
+      y: 70 + Math.random() * (H - GROUND - 230),
+      text: pick(MEME_PHRASES),
+      color: pick(MEME_COLORS),
+      size: 20 + Math.random() * 12,
+      rot: (Math.random() - 0.5) * 0.35,
+    };
+  }
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -128,6 +158,14 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
     const d = difficulty(s.score);
     const b = s.bird;
 
+    const memeSpeed = s.phase === "playing" ? d.speed * 0.3 : 22;
+    for (const m of memes) {
+      m.x -= memeSpeed * dt;
+      if (m.x < -160) Object.assign(m, newMeme(W + 40 + Math.random() * 80));
+    }
+    const wantGlasses = d.level >= MAX_LEVEL && s.phase !== "ready" ? 1 : 0;
+    s.glasses += (wantGlasses - s.glasses) * Math.min(1, dt * 3);
+
     if (s.phase === "ready") {
       b.y = H * 0.42 + Math.sin(s.time * 3) * 10;
       s.groundX = (s.groundX + d.speed * dt) % 40;
@@ -194,6 +232,9 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
       ctx.fill();
     }
 
+    drawDoge(W * 0.74, 120 + Math.sin(s.time * 1.2) * 8, Math.min(70, W * 0.16));
+    drawMemes();
+
     // distant hills
     ctx.fillStyle = "#86efac";
     ctx.beginPath();
@@ -212,6 +253,111 @@ export function createGame(canvas, { onScore, onDeath, onStart } = {}) {
       ctx.fillStyle = `rgba(255,255,255,${s.flash * 0.8})`;
       ctx.fillRect(0, 0, W, H);
     }
+  }
+
+  function drawMemes() {
+    ctx.save();
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    for (const m of memes) {
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(m.rot);
+      ctx.font = `700 ${m.size}px ${MEME_FONT}`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.strokeText(m.text, 0, 0);
+      ctx.fillStyle = m.color;
+      ctx.fillText(m.text, 0, 0);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // An original Doge-style shiba drawn with shapes, glancing sideways at the player.
+  function drawDoge(x, y, r) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.18 + Math.sin(s.time * 0.8) * 0.05);
+    ctx.lineWidth = r * 0.05;
+    ctx.strokeStyle = "#7a4a12";
+    const fur = "#e9a548";
+    const cream = "#fbe7c6";
+
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = fur;
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.25, -r * 0.7);
+      ctx.lineTo(side * r * 0.85, -r * 1.25);
+      ctx.lineTo(side * r * 0.95, -r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#f5c7a1";
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.42, -r * 0.7);
+      ctx.lineTo(side * r * 0.8, -r * 1.05);
+      ctx.lineTo(side * r * 0.84, -r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.fillStyle = fur;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.86, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = cream;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.32, r * 0.62, r * 0.48, 0, 0, Math.PI * 2);
+    ctx.fill();
+    for (const side of [-1, 1]) {
+      ctx.beginPath(); // the shiba "eyebrow" dots
+      ctx.ellipse(side * r * 0.36, -r * 0.42, r * 0.11, r * 0.07, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // side-eye
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.ellipse(side * r * 0.36, -r * 0.18, r * 0.16, r * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1b1206";
+      ctx.beginPath();
+      ctx.arc(side * r * 0.36 - r * 0.08, -r * 0.17, r * 0.075, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = "#1b1206";
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.12, r * 0.14, r * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = r * 0.045;
+    ctx.strokeStyle = "#1b1206";
+    ctx.beginPath();
+    ctx.moveTo(0, r * 0.2);
+    ctx.quadraticCurveTo(-r * 0.08, r * 0.42, -r * 0.26, r * 0.36);
+    ctx.moveTo(0, r * 0.2);
+    ctx.quadraticCurveTo(r * 0.1, r * 0.4, r * 0.3, r * 0.3);
+    ctx.stroke();
+
+    // pixel "deal with it" sunglasses drop in at max level
+    if (s.glasses > 0.01) {
+      const px = r * 0.09;
+      const gy = -r * 0.18 - (1 - s.glasses) * r * 2.2;
+      ctx.fillStyle = "#000";
+      ctx.fillRect(-r * 0.7, gy - px * 1.5, r * 1.4, px);
+      for (const side of [-1, 1]) {
+        const cx = side * r * 0.36 - px * 2.5;
+        ctx.fillRect(cx, gy - px * 0.5, px * 5, px * 2);
+        ctx.fillRect(cx + px, gy + px * 1.5, px * 3, px);
+      }
+      ctx.fillStyle = "#fff";
+      for (const side of [-1, 1]) ctx.fillRect(side * r * 0.36 - px * 1.5, gy - px * 0.5, px, px);
+    }
+    ctx.restore();
   }
 
   function drawPipe(p) {
