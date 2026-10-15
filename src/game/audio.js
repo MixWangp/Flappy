@@ -11,7 +11,7 @@ function loadVolumes() {
     const v = JSON.parse(localStorage.getItem(VOL_KEY));
     if (v && typeof v.music === "number" && typeof v.sfx === "number") return v;
   } catch { /* ignore */ }
-  return { music: 0.35, sfx: 0.7, muted: false };
+  return { music: 0.35, sfx: 0.8, muted: false };
 }
 
 /** Shuffle bag so the same jump sound never plays twice in a row. */
@@ -35,7 +35,7 @@ const midi = (n) => 440 * Math.pow(2, (n - 69) / 12);
 
 export function createAudio() {
   let ctx = null;
-  let master, musicBus, sfxBus, delay;
+  let master, musicBus, musicDuck, sfxBus, delay;
   let noiseBuf = null;
   let schedTimer = null;
   let nextBeat = 0;
@@ -53,7 +53,7 @@ export function createAudio() {
     const t = ctx.currentTime;
     master.gain.setTargetAtTime(vol.muted ? 0 : 1, t, 0.05);
     musicBus.gain.setTargetAtTime(vol.music * 0.5, t, 0.1);
-    sfxBus.gain.setTargetAtTime(vol.sfx * 0.9, t, 0.05);
+    sfxBus.gain.setTargetAtTime(vol.sfx * 1.8, t, 0.05);
   }
 
   function unlock() {
@@ -72,7 +72,9 @@ export function createAudio() {
     const warm = ctx.createBiquadFilter();
     warm.type = "lowpass";
     warm.frequency.value = 1800;
-    musicBus.connect(warm).connect(master);
+    // musicDuck dips the music for a moment on every jump so the sound effect pops out
+    musicDuck = ctx.createGain();
+    musicBus.connect(musicDuck).connect(warm).connect(master);
     delay = ctx.createDelay(1);
     delay.delayTime.value = 0.38;
     const fb = ctx.createGain();
@@ -81,7 +83,14 @@ export function createAudio() {
     wet.gain.value = 0.35;
     delay.connect(fb).connect(delay);
     delay.connect(wet).connect(warm);
-    sfxBus.connect(master);
+    // effects go through a compressor so they hit hard but never clip
+    const punch = ctx.createDynamicsCompressor();
+    punch.threshold.value = -20;
+    punch.knee.value = 6;
+    punch.ratio.value = 5;
+    punch.attack.value = 0.002;
+    punch.release.value = 0.12;
+    sfxBus.connect(punch).connect(master);
 
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -238,27 +247,55 @@ export function createAudio() {
   }
 
   const JUMPS = {
-    boing: () => tone({ type: "sine", from: 180, to: 620, dur: 0.28, vibrato: 18 }),
-    squeak: () => tone({ type: "square", from: 1300, to: 2200, dur: 0.09, peak: 0.12 }),
+    boing: () => tone({ type: "sine", from: 160, to: 700, dur: 0.3, peak: 0.5, vibrato: 18 }),
+    squeak: () => tone({ type: "square", from: 1300, to: 2300, dur: 0.11, peak: 0.25 }),
     quack: () => {
-      tone({ type: "sawtooth", from: 520, to: 360, dur: 0.14, peak: 0.25, filter: { type: "bandpass", freq: 1100, q: 4 } });
-      tone({ type: "sawtooth", from: 480, to: 330, dur: 0.12, peak: 0.2, filter: { type: "bandpass", freq: 1100, q: 4 }, at: 0.13 });
+      tone({ type: "sawtooth", from: 560, to: 380, dur: 0.15, peak: 0.45, filter: { type: "bandpass", freq: 1100, q: 3 } });
+      tone({ type: "sawtooth", from: 500, to: 340, dur: 0.13, peak: 0.4, filter: { type: "bandpass", freq: 1100, q: 3 }, at: 0.14 });
     },
-    pew: () => tone({ type: "square", from: 1400, to: 160, dur: 0.18, peak: 0.12 }),
-    slide: () => tone({ type: "sine", from: 400, to: 1500, dur: 0.32, peak: 0.25 }),
-    bloop: () => tone({ type: "sine", from: 300, to: 900, dur: 0.1, peak: 0.35 }),
-    kazoo: () => tone({ type: "sawtooth", from: 330, to: 440, dur: 0.22, peak: 0.16, vibrato: 7, filter: { type: "lowpass", freq: 1600 } }),
-    pfft: () => noise(ctx.currentTime, 0.16, "lowpass", 600, 0.5, sfxBus),
+    pew: () => tone({ type: "square", from: 1600, to: 140, dur: 0.2, peak: 0.25 }),
+    slide: () => tone({ type: "sine", from: 380, to: 1700, dur: 0.33, peak: 0.45 }),
+    bloop: () => tone({ type: "sine", from: 280, to: 1000, dur: 0.12, peak: 0.55 }),
+    kazoo: () => tone({ type: "sawtooth", from: 330, to: 450, dur: 0.25, peak: 0.3, vibrato: 7, filter: { type: "lowpass", freq: 1800 } }),
+    pfft: () => noise(ctx.currentTime, 0.2, "lowpass", 700, 0.9, sfxBus),
     boink: () => {
-      tone({ type: "triangle", from: 900, to: 300, dur: 0.12, peak: 0.3 });
-      tone({ type: "triangle", from: 600, to: 1200, dur: 0.1, peak: 0.25, at: 0.1 });
+      tone({ type: "triangle", from: 950, to: 300, dur: 0.12, peak: 0.5 });
+      tone({ type: "triangle", from: 600, to: 1300, dur: 0.11, peak: 0.45, at: 0.1 });
     },
-    honk: () => tone({ type: "square", from: 250, to: 230, dur: 0.18, peak: 0.12, filter: { type: "lowpass", freq: 900 } }),
+    honk: () => tone({ type: "square", from: 260, to: 235, dur: 0.22, peak: 0.25, filter: { type: "lowpass", freq: 1000 } }),
     chirp: () => {
-      tone({ type: "sine", from: 2000, to: 3000, dur: 0.05, peak: 0.15 });
-      tone({ type: "sine", from: 2200, to: 3200, dur: 0.05, peak: 0.15, at: 0.07 });
+      tone({ type: "sine", from: 2000, to: 3100, dur: 0.06, peak: 0.3 });
+      tone({ type: "sine", from: 2200, to: 3300, dur: 0.06, peak: 0.3, at: 0.08 });
     },
-    wobble: () => tone({ type: "triangle", from: 260, to: 520, dur: 0.3, peak: 0.3, vibrato: 25 }),
+    wobble: () => tone({ type: "triangle", from: 240, to: 560, dur: 0.32, peak: 0.5, vibrato: 25 }),
+
+    // --- new ones ---
+    spring: () => tone({ type: "triangle", from: 120, to: 900, dur: 0.38, peak: 0.5, vibrato: 32 }),
+    siren: () => tone({ type: "sawtooth", from: 500, to: 1500, dur: 0.3, peak: 0.22, vibrato: 9, filter: { type: "lowpass", freq: 2500 } }),
+    coin: () => {
+      tone({ type: "square", from: 988, to: 988, dur: 0.07, peak: 0.22 });
+      tone({ type: "square", from: 1319, to: 1319, dur: 0.2, peak: 0.22, at: 0.07 });
+    },
+    meow: () => tone({ type: "sawtooth", from: 700, to: 450, dur: 0.32, peak: 0.35, vibrato: 5, filter: { type: "bandpass", freq: 1500, q: 2 } }),
+    yip: () => tone({ type: "sawtooth", from: 900, to: 1500, dur: 0.09, peak: 0.4, filter: { type: "bandpass", freq: 1800, q: 2 } }),
+    airhorn: () => [233, 294, 349].forEach((f) => tone({ type: "sawtooth", from: f, to: f * 0.98, dur: 0.32, peak: 0.16, filter: { type: "lowpass", freq: 2600 } })),
+    robot: () => [660, 990, 1320, 880].forEach((f, i) => tone({ type: "square", from: f, to: f, dur: 0.05, peak: 0.2, at: i * 0.05 })),
+    bubble: () => tone({ type: "sine", from: 400, to: 1600, dur: 0.07, peak: 0.6 }),
+    ribbit: () => {
+      tone({ type: "sawtooth", from: 180, to: 140, dur: 0.08, peak: 0.45, filter: { type: "bandpass", freq: 700, q: 4 } });
+      tone({ type: "sawtooth", from: 220, to: 160, dur: 0.1, peak: 0.45, filter: { type: "bandpass", freq: 700, q: 4 }, at: 0.1 });
+    },
+    cork: () => {
+      noise(ctx.currentTime, 0.03, "highpass", 2000, 0.8, sfxBus);
+      tone({ type: "sine", from: 800, to: 300, dur: 0.08, peak: 0.5, at: 0.01 });
+    },
+    cowbell: () => [540, 800].forEach((f) => tone({ type: "square", from: f, to: f, dur: 0.25, peak: 0.16, filter: { type: "bandpass", freq: 900, q: 3 } })),
+    whistle: () => tone({ type: "sine", from: 1800, to: 2600, dur: 0.25, peak: 0.35, vibrato: 14 }),
+    rubberChicken: () => tone({ type: "sawtooth", from: 900, to: 1700, dur: 0.35, peak: 0.3, vibrato: 11, filter: { type: "bandpass", freq: 2000, q: 1.5 } }),
+    zap: () => {
+      tone({ type: "sawtooth", from: 2400, to: 90, dur: 0.16, peak: 0.25 });
+      tone({ type: "square", from: 1800, to: 120, dur: 0.16, peak: 0.12 });
+    },
   };
   const nextJump = bag(Object.keys(JUMPS));
 
@@ -272,6 +309,14 @@ export function createAudio() {
 
     jump() {
       if (!ctx || vol.muted) return;
+      const t = ctx.currentTime;
+      // a crisp "tick" on top of every jump sound so the tap always feels responsive
+      noise(t, 0.025, "highpass", 3500, 0.5, sfxBus);
+      // duck the music for a beat
+      musicDuck.gain.cancelScheduledValues(t);
+      musicDuck.gain.setValueAtTime(musicDuck.gain.value, t);
+      musicDuck.gain.linearRampToValueAtTime(0.45, t + 0.02);
+      musicDuck.gain.linearRampToValueAtTime(1, t + 0.4);
       JUMPS[nextJump()]();
     },
     score() {
