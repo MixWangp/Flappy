@@ -229,10 +229,10 @@ function BoardPanel({ board, uid }) {
 
 function Title() {
   return (
-    <h1 className="shrink-0 text-center text-5xl leading-none font-black text-amber-300 [text-shadow:0_4px_0_#7c2d12,0_8px_16px_rgba(0,0,0,.35)] sm:text-6xl">
-      Flappy
+    <h1 className="shrink-0 text-center font-[Mitr,sans-serif] text-5xl leading-[1.15] font-bold text-amber-300 [text-shadow:0_4px_0_#7c2d12,0_8px_16px_rgba(0,0,0,.35)] sm:text-6xl">
+      นกน้อย
       <br />
-      <span className="text-white">Friends</span>
+      <span className="text-white">จอมกวน</span>
     </h1>
   );
 }

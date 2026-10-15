@@ -53,6 +53,17 @@ const IMPACT_FONT = '"Anton", "Mitr", Impact, "Arial Narrow", sans-serif';
 const EMOJI_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 const DOODLES = ["shiba", "cool-shiba", "cat", "stonks", "notstonks", "bonk", "brain", "chicken", "moai", "clown"];
 
+// Real meme photos (public-domain images with meme captions). The app registers them at
+// startup; until they load, the parade simply uses doodles instead.
+const PHOTOS = [];
+export function registerMemeImages(list) {
+  for (const { src, top = "", bottom = "" } of list) {
+    const img = new Image();
+    img.onload = () => PHOTOS.push({ img, top, bottom });
+    img.src = src;
+  }
+}
+
 /** Shuffle bag: hands out every item once, in random order, before repeating. */
 function bag(items) {
   let pool = [];
@@ -76,6 +87,12 @@ export function createMemeLayer(ctx, H, GROUND) {
   const nextDoodle = bag(DOODLES);
   const nextColor = bag(COLORS);
   const nextLevelUp = bag(LEVEL_UP);
+  let photoBag = null;
+  let photoCount = 0;
+  const nextPhoto = () => {
+    if (photoCount !== PHOTOS.length) { photoBag = bag(PHOTOS); photoCount = PHOTOS.length; }
+    return photoBag();
+  };
   const ticker = HEADLINES.slice().sort(() => Math.random() - 0.5).join("     •     ") + "     •     ";
   let tickerX = 0;
   let tickerW = 0;
@@ -83,8 +100,8 @@ export function createMemeLayer(ctx, H, GROUND) {
 
   // Two depths: far items are small, faded and slow; near items are bigger and faster.
   const LAYERS = [
-    { parallax: 0.16, idle: 14, gap: [-50, 20], alpha: 0.6, scale: 0.7 },
-    { parallax: 0.38, idle: 30, gap: [-10, 70], alpha: 0.9, scale: 1 },
+    { parallax: 0.16, idle: 14, gap: [-15, 55], alpha: 0.6, scale: 0.7 },
+    { parallax: 0.38, idle: 30, gap: [35, 115], alpha: 0.9, scale: 1 },
   ];
   const items = [[], []];
   // Horizontal lanes keep neighbours from piling up at the same height.
@@ -94,7 +111,8 @@ export function createMemeLayer(ctx, H, GROUND) {
   function spawn(layer, x) {
     const L = LAYERS[layer];
     const roll = Math.random();
-    const kind = roll < 0.5 ? "text" : roll < 0.75 ? "emoji" : "doodle";
+    const photoShare = PHOTOS.length ? 0.18 : 0;
+    const kind = roll < 0.45 ? "text" : roll < 0.65 ? "emoji" : roll < 1 - photoShare ? "doodle" : "photo";
     const item = {
       kind,
       x,
@@ -111,6 +129,9 @@ export function createMemeLayer(ctx, H, GROUND) {
     } else if (kind === "emoji") {
       item.text = nextEmoji();
       item.size = (34 + Math.random() * 20) * L.scale;
+    } else if (kind === "photo") {
+      item.photo = nextPhoto();
+      item.size = (40 + Math.random() * 12) * L.scale;
     } else {
       item.doodle = nextDoodle();
       item.size = (34 + Math.random() * 14) * L.scale;
@@ -124,7 +145,7 @@ export function createMemeLayer(ctx, H, GROUND) {
       ctx.font = fontFor(item);
       return ctx.measureText(item.text).width;
     }
-    return item.size * 2.4;
+    return item.size * (item.kind === "photo" ? 2.8 : 2.4);
   }
 
   const fontFor = (item) =>
@@ -176,7 +197,8 @@ export function createMemeLayer(ctx, H, GROUND) {
           ctx.font = `${it.size}px ${EMOJI_FONT}`;
           ctx.textBaseline = "middle";
           ctx.fillText(it.text, 0, 0);
-        } else drawDoodle(it.doodle, it.size, time);
+        } else if (it.kind === "photo") drawPhoto(it.photo, it.size);
+        else drawDoodle(it.doodle, it.size, time);
         ctx.restore();
       }
     },
@@ -242,6 +264,26 @@ export function createMemeLayer(ctx, H, GROUND) {
       ctx.fillStyle = it.color;
       ctx.fillText(it.text, 0, 0);
     }
+  }
+
+  // Classic meme card: the photo with white impact-style captions top and bottom.
+  function drawPhoto({ img, top, bottom }, r) {
+    const w = r * 2.6;
+    const h = Math.min(w * (img.naturalHeight / img.naturalWidth), w * 1.3);
+    const x = 0;
+    const y = -h / 2;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+    ctx.drawImage(img, x, y, w, h);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 4, y - 4, w + 8, h + 8);
+    ctx.save();
+    ctx.translate(x + w / 2, 0);
+    const size = Math.max(12, r * 0.34);
+    if (top) caption(top.toUpperCase(), y + size * 0.75, size);
+    if (bottom) caption(bottom.toUpperCase(), -y - size * 0.7, size);
+    ctx.restore();
   }
 
   function caption(text, y, size) {

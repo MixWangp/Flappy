@@ -1,4 +1,4 @@
-# 🐤 Flappy Friends
+# 🐤 นกน้อยจอมกวน (Flappy Friends)
 
 A Flappy Bird–style web game with **frictionless online play**: friends open one link, type a name once, and compete on a **real-time global Top 20 leaderboard**. They don't need an email or a password.
 
