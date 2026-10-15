@@ -280,9 +280,16 @@ export function createMemeLayer(ctx, H, GROUND) {
     ctx.strokeRect(x - 4, y - 4, w + 8, h + 8);
     ctx.save();
     ctx.translate(x + w / 2, 0);
-    const size = Math.max(12, r * 0.34);
-    if (top) caption(top.toUpperCase(), y + size * 0.75, size);
-    if (bottom) caption(bottom.toUpperCase(), -y - size * 0.7, size);
+    const fit = (text) => {
+      // shrink long captions so they stay inside the card
+      let size = Math.max(12, r * 0.36);
+      ctx.font = `400 ${size}px ${IMPACT_FONT}`;
+      const tw = ctx.measureText(text).width;
+      if (tw > w * 0.94) size *= (w * 0.94) / tw;
+      return size;
+    };
+    if (top) { const t = top.toUpperCase(); const sz = fit(t); caption(t, y + sz * 0.8, sz); }
+    if (bottom) { const b = bottom.toUpperCase(); const sz = fit(b); caption(b, -y - sz * 0.75, sz); }
     ctx.restore();
   }
 
