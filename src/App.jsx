@@ -33,7 +33,7 @@ export default function App() {
         setInitError(
           err?.code === "auth/admin-restricted-operation" || err?.code === "auth/operation-not-allowed"
             ? "Anonymous sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method."
-            : "Couldn't connect to the game server. Check your connection and try again."
+            : `Couldn't connect to the game server. Check your connection and try again. (${err?.code || err?.message || "unknown"})`
         );
         setScreen("error");
       });
@@ -85,7 +85,7 @@ export default function App() {
         .then((r) => setResult((prev) => prev && { ...prev, best: r.best, isNewBest: r.isNewBest, saving: false }))
         .catch((err) => {
           console.error(err);
-          setResult((prev) => prev && { ...prev, saving: false, error: true });
+          setResult((prev) => prev && { ...prev, saving: false, error: err?.code || err?.message || "unknown" });
         });
     },
     [player]
@@ -186,7 +186,7 @@ export default function App() {
                 {result.saving ? (
                   <span className="text-slate-400">Saving…</span>
                 ) : result.error ? (
-                  <span className="text-rose-300">Couldn't save your score</span>
+                  <span className="text-rose-300">Couldn't save your score ({result.error})</span>
                 ) : result.isNewBest ? (
                   <span className="text-emerald-300">🎉 New personal best!</span>
                 ) : (
