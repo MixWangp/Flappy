@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { createGame } from "../game/engine";
+import { MAX_LEVEL, createGame, difficulty } from "../game/engine";
 
 /**
  * Mounts the canvas engine. When `interactive` is false it just idles as an animated
@@ -42,8 +42,9 @@ export default function Game({ interactive, onDeath }) {
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
       {interactive && phase !== "dead" && (
-        <div className="pointer-events-none absolute inset-x-0 top-[6%] text-center text-6xl font-black text-white [text-shadow:0_4px_0_#7c2d12,0_0_12px_rgba(0,0,0,.35)]">
-          {score}
+        <div className="pointer-events-none absolute inset-x-0 top-[6%] flex flex-col items-center gap-2">
+          <div className="text-6xl font-black text-white [text-shadow:0_4px_0_#7c2d12,0_0_12px_rgba(0,0,0,.35)]">{score}</div>
+          <LevelBadge level={difficulty(score).level} />
         </div>
       )}
       {interactive && phase === "ready" && (
@@ -52,6 +53,20 @@ export default function Game({ interactive, onDeath }) {
           <p className="rounded-full bg-black/35 px-4 py-1.5 text-lg font-bold">Tap, click or press Space</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function LevelBadge({ level }) {
+  const max = level >= MAX_LEVEL;
+  return (
+    <div
+      key={level} // remount on level change to replay the pop animation
+      className={`animate-[pop_.6s_ease-out] rounded-full px-3 py-0.5 text-[13px] font-extrabold tracking-[1.5px] uppercase ${
+        max ? "bg-rose-400 text-rose-950" : "bg-black/30 text-white"
+      }`}
+    >
+      {max ? "Max level" : `Level ${level}`}
     </div>
   );
 }

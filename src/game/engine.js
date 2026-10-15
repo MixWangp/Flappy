@@ -14,15 +14,22 @@ const MAX_FALL = 900;
 const PIPE_W = 78;
 const STEP = 1 / 120; // fixed physics timestep (same feel at 60Hz and 144Hz)
 
-/** Difficulty curve: everything is a function of the current score. */
+export const MAX_LEVEL = 10;
+
+/**
+ * Difficulty goes up in steps: one level every 10 points, maxing out at 100+.
+ * Pipes start moving up and down at level 1 (10 points).
+ */
 export function difficulty(score) {
-  const t = Math.min(score / 40, 1); // fully ramped at 40 points
+  const level = Math.min(Math.floor(score / 10), MAX_LEVEL);
+  const t = level / MAX_LEVEL;
   return {
-    speed: 190 + 170 * t,            // px/s the world scrolls
-    gap: 175 - 50 * t,               // vertical opening between pipes
-    spacing: 250 - 45 * t,           // horizontal distance between pipes
-    wobble: score >= 8 ? Math.min((score - 8) * 2.5, 60) : 0, // pipes start moving up/down
-    wobbleSpeed: 2 + 1.5 * t,        // ...and move faster the higher you get
+    level,
+    speed: 190 + 210 * t,            // px/s the world scrolls: 190 -> 400
+    gap: 175 - 60 * t,               // vertical opening between pipes: 175 -> 115
+    spacing: 250 - 55 * t,           // horizontal distance between pipes: 250 -> 195
+    wobble: level >= 1 ? 15 + (55 * (level - 1)) / (MAX_LEVEL - 1) : 0, // up/down range: 15 -> 70
+    wobbleSpeed: 1.8 + 2.2 * t,      // how fast moving pipes swing
   };
 }
 

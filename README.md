@@ -18,7 +18,7 @@ Built with React 19, Tailwind CSS 4, Vite, and Firebase (Anonymous Auth + Firest
 
 **Controls:** Spacebar / ↑ / W, mouse click, or tap. On the menu and Game Over screens, Space or Enter starts a new run.
 
-**Progressive difficulty** (see `difficulty()` in `src/game/engine.js`): the scroll speed rises from 170 to 320, the gap shrinks from 190 to 135, and pipes get closer together. From **15 points** the pipes start moving up and down. The ramp is complete at 50 points.
+**Progressive difficulty** (see `difficulty()` in `src/game/engine.js`): the game gets harder in steps, one level every 10 points, and reaches its hardest at **100+ points** (level 10). Pipes start moving up and down at **10 points**. Each level adds scroll speed (190 to 400), shrinks the gap (175 to 115), brings pipes closer together, and makes the moving pipes swing wider and faster. A level badge under the score shows the current level.
 
 ### Project structure
 
