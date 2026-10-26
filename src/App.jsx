@@ -195,7 +195,7 @@ export default function App() {
             <PrimaryButton onClick={startGame} className="w-full max-w-sm">▶ PLAY</PrimaryButton>
             <div className="-mt-1 flex items-center gap-4 rounded-full bg-slate-900/60 px-4 py-1.5 text-xs font-semibold">
               <button onClick={() => setScreen("rename")} className="text-white/80 underline-offset-2 hover:underline">
-                Change name
+                ✏️ เปลี่ยนชื่อ
               </button>
               <button
                 onClick={handleReset}
@@ -203,7 +203,7 @@ export default function App() {
                 className={resetState === "confirm" ? "rounded-full bg-rose-500 px-3 py-1 text-white" : "text-white/80 underline-offset-2 hover:underline"}
               >
                 {{
-                  idle: "รีเซ็ตคะแนนของฉัน",
+                  idle: "🗑️ รีเซ็ตคะแนนของฉัน",
                   confirm: "แน่ใจนะ? กดอีกครั้งเพื่อลบ",
                   busy: "กำลังลบ…",
                   done: "รีเซ็ตแล้ว ✓",
@@ -253,6 +253,12 @@ export default function App() {
               </button>
               <PrimaryButton onClick={startGame} className="flex-[2]">↻ Play again</PrimaryButton>
             </div>
+            <button
+              onClick={() => setScreen("rename")}
+              className="-mt-1 rounded-full bg-slate-900/60 px-4 py-1.5 text-xs font-semibold text-white/85 hover:text-white"
+            >
+              ✏️ เปลี่ยนชื่อ
+            </button>
             <BoardPanel board={board} uid={player?.uid} />
           </Overlay>
         )}
