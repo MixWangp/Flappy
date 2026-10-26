@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_LEVEL, createGame, difficulty } from "../game/engine";
 import { audio } from "../lib/sound";
+import { useT } from "../lib/i18n";
 
 /**
  * Mounts the canvas engine. When `interactive` is false it just idles as an animated
  * backdrop (used behind the menus).
  */
 export default function Game({ interactive, onDeath }) {
+  const t = useT();
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
   const onDeathRef = useRef(onDeath);
@@ -52,7 +54,7 @@ export default function Game({ interactive, onDeath }) {
       {interactive && phase === "ready" && (
         <div className="pointer-events-none absolute inset-x-0 top-[55%] flex flex-col items-center gap-2 text-white">
           <div className="animate-bounce text-4xl">👆</div>
-          <p className="rounded-full bg-black/35 px-4 py-1.5 text-lg font-bold">Tap, click or press Space</p>
+          <p className="rounded-full bg-black/35 px-4 py-1.5 text-lg font-bold">{t("hint")}</p>
         </div>
       )}
     </div>
@@ -60,6 +62,7 @@ export default function Game({ interactive, onDeath }) {
 }
 
 function LevelBadge({ level }) {
+  const t = useT();
   const max = level >= MAX_LEVEL;
   return (
     <div
@@ -68,7 +71,7 @@ function LevelBadge({ level }) {
         max ? "bg-rose-400 text-rose-950" : "bg-black/30 text-white"
       }`}
     >
-      {max ? "Max level" : `Level ${level}`}
+      {max ? t("maxLevel") : t("level", { n: level })}
     </div>
   );
 }

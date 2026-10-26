@@ -4,6 +4,7 @@ import Leaderboard from "./components/Leaderboard";
 import NameScreen from "./components/NameScreen";
 import SoundControl from "./components/SoundControl";
 import { audio } from "./lib/sound";
+import { useT } from "./lib/i18n";
 import { isFirebaseConfigured } from "./lib/firebase";
 import { randomDeathCaption } from "./game/engine";
 import { initSession, resetMyScore, saveName, submitScore, subscribeLeaderboard } from "./lib/scores";
@@ -13,6 +14,7 @@ const readBest = () => { try { return Number(localStorage.getItem(BEST_KEY)) || 
 
 // screens: loading | error | name | rename | menu | playing | gameover
 export default function App() {
+  const t = useT();
   const [screen, setScreen] = useState("loading");
   const [player, setPlayer] = useState(null); // { uid, name }
   const [initError, setInitError] = useState("");
@@ -34,8 +36,8 @@ export default function App() {
         console.error(err);
         setInitError(
           err?.code === "auth/admin-restricted-operation" || err?.code === "auth/operation-not-allowed"
-            ? "Anonymous sign-in is disabled. Enable it in Firebase Console → Authentication → Sign-in method."
-            : `Couldn't connect to the game server. Check your connection and try again. (${err?.code || err?.message || "unknown"})`
+            ? { key: "errAnon" }
+            : { key: "errConnect", code: err?.code || err?.message || "unknown" }
         );
         setScreen("error");
       });
@@ -150,20 +152,20 @@ export default function App() {
 
         {!isFirebaseConfigured && (
           <div className="absolute inset-x-0 top-0 z-20 bg-amber-500 px-3 py-1 text-center text-xs font-bold text-amber-950">
-            Offline mode: add your Firebase keys to enable the global leaderboard
+            {t("offline")}
           </div>
         )}
 
         {screen === "loading" && (
-          <Overlay><p className="animate-pulse text-xl font-black text-white">Loading…</p></Overlay>
+          <Overlay><p className="animate-pulse text-xl font-black text-white">{t("loading")}</p></Overlay>
         )}
 
         {screen === "error" && (
           <Overlay>
             <div className="max-w-sm rounded-3xl bg-slate-900/90 p-6 text-center text-white">
               <p className="text-4xl">😵</p>
-              <p className="mt-2 font-semibold">{initError}</p>
-              <PrimaryButton onClick={boot} className="mt-4">Retry</PrimaryButton>
+              <p className="mt-2 font-semibold">{initError && t(initError.key, { code: initError.code })}</p>
+              <PrimaryButton onClick={boot} className="mt-4">{t("retry")}</PrimaryButton>
             </div>
           </Overlay>
         )}
@@ -184,31 +186,25 @@ export default function App() {
             <Title />
             <div className="flex w-full max-w-sm items-center justify-between rounded-2xl bg-slate-900/80 px-4 py-3 text-white">
               <div className="min-w-0">
-                <p className="text-[11px] tracking-wider text-slate-400 uppercase">Playing as</p>
+                <p className="text-[11px] tracking-wider text-slate-400 uppercase">{t("playingAs")}</p>
                 <p className="truncate text-lg font-black">{player?.name}</p>
               </div>
               <div className="text-right">
-                <p className="text-[11px] tracking-wider text-slate-400 uppercase">Best</p>
+                <p className="text-[11px] tracking-wider text-slate-400 uppercase">{t("best")}</p>
                 <p className="text-lg font-black text-amber-300">{best}</p>
               </div>
             </div>
-            <PrimaryButton onClick={startGame} className="w-full max-w-sm">▶ PLAY</PrimaryButton>
+            <PrimaryButton onClick={startGame} className="w-full max-w-sm">{t("play")}</PrimaryButton>
             <div className="-mt-1 flex items-center gap-4 rounded-full bg-slate-900/60 px-4 py-1.5 text-xs font-semibold">
               <button onClick={() => setScreen("rename")} className="text-white/80 underline-offset-2 hover:underline">
-                ✏️ เปลี่ยนชื่อ
+                {t("rename")}
               </button>
               <button
                 onClick={handleReset}
                 disabled={resetState === "busy"}
                 className={resetState === "confirm" ? "rounded-full bg-rose-500 px-3 py-1 text-white" : "text-white/80 underline-offset-2 hover:underline"}
               >
-                {{
-                  idle: "🗑️ รีเซ็ตคะแนนของฉัน",
-                  confirm: "แน่ใจนะ? กดอีกครั้งเพื่อลบ",
-                  busy: "กำลังลบ…",
-                  done: "รีเซ็ตแล้ว ✓",
-                  error: "ลบไม่สำเร็จ ลองใหม่",
-                }[resetState]}
+                {t({ idle: "resetIdle", confirm: "resetConfirm", busy: "resetBusy", done: "resetDone", error: "resetError" }[resetState])}
               </button>
             </div>
             <BoardPanel board={board} uid={player?.uid} />
@@ -218,29 +214,29 @@ export default function App() {
         {screen === "gameover" && result && (
           <Overlay>
             <div className="flex shrink-0 flex-col items-center gap-0.5">
-              <p className="rounded-full bg-black/35 px-3 py-0.5 text-xs font-extrabold tracking-[2px] text-white uppercase">Game over</p>
+              <p className="rounded-full bg-black/35 px-3 py-0.5 text-xs font-extrabold tracking-[2px] text-white uppercase">{t("gameOver")}</p>
               <h2 className="meme-caption text-center text-[clamp(44px,13vw,62px)] leading-[1.05] text-balance text-white uppercase">
                 {result.caption}
               </h2>
             </div>
             <div className="grid w-full max-w-sm grid-cols-2 gap-3 rounded-2xl bg-slate-900/85 p-4 text-center text-white">
               <div>
-                <p className="text-[11px] tracking-wider text-slate-400 uppercase">Score</p>
+                <p className="text-[11px] tracking-wider text-slate-400 uppercase">{t("score")}</p>
                 <p className="text-4xl font-black">{result.score}</p>
               </div>
               <div>
-                <p className="text-[11px] tracking-wider text-slate-400 uppercase">Best</p>
+                <p className="text-[11px] tracking-wider text-slate-400 uppercase">{t("best")}</p>
                 <p className="text-4xl font-black text-amber-300">{result.best}</p>
               </div>
               <p className="col-span-2 h-5 text-sm font-bold">
                 {result.saving ? (
-                  <span className="text-slate-400">Saving…</span>
+                  <span className="text-slate-400">{t("saving")}</span>
                 ) : result.error ? (
-                  <span className="text-rose-300">Couldn't save your score ({result.error})</span>
+                  <span className="text-rose-300">{t("saveFailed", { code: result.error })}</span>
                 ) : result.isNewBest ? (
-                  <span className="text-emerald-300">🎉 New personal best!</span>
+                  <span className="text-emerald-300">{t("newBest")}</span>
                 ) : (
-                  <span className="text-slate-400">Beat {result.best} to climb the board</span>
+                  <span className="text-slate-400">{t("beatToClimb", { best: result.best })}</span>
                 )}
               </p>
             </div>
@@ -249,15 +245,15 @@ export default function App() {
                 onClick={() => setScreen("menu")}
                 className="flex-1 rounded-xl bg-white/90 py-3 font-black text-slate-800 shadow-[0_4px_0_#64748b] active:translate-y-1 active:shadow-none"
               >
-                Menu
+                {t("menu")}
               </button>
-              <PrimaryButton onClick={startGame} className="flex-[2]">↻ Play again</PrimaryButton>
+              <PrimaryButton onClick={startGame} className="flex-[2]">{t("playAgain")}</PrimaryButton>
             </div>
             <button
               onClick={() => setScreen("rename")}
               className="-mt-1 rounded-full bg-slate-900/60 px-4 py-1.5 text-xs font-semibold text-white/85 hover:text-white"
             >
-              ✏️ เปลี่ยนชื่อ
+              {t("rename")}
             </button>
             <BoardPanel board={board} uid={player?.uid} />
           </Overlay>
@@ -284,12 +280,18 @@ function BoardPanel({ board, uid }) {
 }
 
 function Title() {
+  const t = useT();
   return (
-    <h1 className="shrink-0 text-center font-[Mitr,sans-serif] text-5xl leading-[1.15] font-bold text-amber-300 [text-shadow:0_4px_0_#7c2d12,0_8px_16px_rgba(0,0,0,.35)] sm:text-6xl">
-      นกน้อย
-      <br />
-      <span className="text-white">จอมกวน</span>
-    </h1>
+    <div className="flex shrink-0 flex-col items-center">
+      <h1 className="text-center font-[Mitr,sans-serif] text-5xl leading-[1.15] font-bold text-amber-300 [text-shadow:0_4px_0_#7c2d12,0_8px_16px_rgba(0,0,0,.35)] sm:text-6xl">
+        นกน้อย
+        <br />
+        <span className="text-white">จอมกวน</span>
+      </h1>
+      {t("subtitle") && (
+        <p className="mt-1 rounded-full bg-black/35 px-3 py-0.5 text-xs font-extrabold tracking-[2px] text-white uppercase">{t("subtitle")}</p>
+      )}
+    </div>
   );
 }
 
